@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:wght@200;300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --fg: #f0ede8;
+    --muted: #3a3835;
+    --accent: #c8b89a;
+    --btn-bg: #141412;
+    --btn-active: #1e1c19;
+    --radius: 14px;
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  }
+
+  /* ── PRESETS ── */
+  .presets {
+    display: flex;
+    gap: 8px;
+    padding: 20px 20px 0;
+    flex-shrink: 0;
+  }
+
+  .preset {
+    flex: 1;
+    background: var(--btn-bg);
+    border: 1px solid #1f1e1b;
+    border-radius: 10px;
+    padding: 10px 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 300;
+    color: #7a7670;
+    letter-spacing: 0.04em;
+    text-align: center;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.15s;
+    line-height: 1.4;
+  }
+
+  .preset.active {
+    color: var(--accent);
+    border-color: #2e2b26;
+    background: var(--btn-active);
+  }
+
+  .preset:active {
+    transform: scale(0.97);
+  }
+
+  .preset span {
+    display: block;
+    font-size: 9px;
+    color: #4a4844;
+    margin-top: 2px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 200;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .preset.active span { color: #6a6460; }
+
+  /* ── TIMER DISPLAY ── */
+  .timer-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+  }
+
+  .timer {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(52px, 18vw, 86px);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    line-height: 1;
+    transition: color 0.4s;
+    text-align: center;
+  }
+
+  .timer.done {
+    color: var(--accent);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 1px;
+    background: var(--muted);
+    border-radius: 1px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    width: 100%;
+    transform-origin: left;
+    transition: transform 0.5s linear;
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 200;
+    color: #4a4844;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* ── BUTTONS ── */
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 20px;
+    padding-bottom: max(env(safe-area-inset-bottom, 16px), 24px);
+    flex-shrink: 0;
+  }
+
+  .btn {
+    width: 100%;
+    height: 60px;
+    border-radius: var(--radius);
+    border: 1px solid #1f1e1b;
+    background: var(--btn-bg);
+    color: var(--fg);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s, color 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+    background: var(--btn-active);
+  }
+
+  .btn-start {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+    font-size: 14px;
+  }
+
+  .btn-start:active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .btn-pause {
+    background: var(--btn-bg);
+    color: var(--accent);
+    border-color: #2e2b26;
+  }
+
+  .btn-reset {
+    color: #4a4844;
+    font-size: 11px;
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .dot-run {
+    background: #3a8a5a;
+    animation: blink 1s step-start infinite;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="presets" id="presets">
+  <button class="preset active" data-seconds="900">
+    15:00
+    <span>15 min</span>
+  </button>
+  <button class="preset" data-seconds="54000">
+    15:00:00
+    <span>15 hrs</span>
+  </button>
+  <button class="preset" data-seconds="180">
+    3:00
+    <span>0.05 hrs</span>
+  </button>
+  <button class="preset" data-seconds="50000">
+    13:53:20
+    <span>50k sec</span>
+  </button>
+</div>
+
+<div class="timer-wrap">
+  <div class="timer" id="display">15:00</div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress"></div>
+  </div>
+  <div class="label" id="statusLabel">ready</div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-start" id="toggleBtn" onclick="toggle()">
+    <span class="dot"></span>
+    Start
+  </button>
+  <button class="btn btn-reset" onclick="reset()">Reset</button>
+</div>
+
+<script>
+  const PRESETS = [900, 54000, 180, 50000];
+  let totalSeconds = 900;
+  let remaining = 900;
+  let running = false;
+  let interval = null;
+  let doneFlag = false;
+
+  const display = document.getElementById('display');
+  const progress = document.getElementById('progress');
+  const statusLabel = document.getElementById('statusLabel');
+  const toggleBtn = document.getElementById('toggleBtn');
+  const presetBtns = document.querySelectorAll('.preset');
+
+  function fmt(s) {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function updateDisplay() {
+    display.textContent = fmt(remaining);
+    const ratio = totalSeconds > 0 ? remaining / totalSeconds : 0;
+    progress.style.transform = `scaleX(${ratio})`;
+  }
+
+  function setToggleState(state) {
+    // state: 'ready' | 'running' | 'paused' | 'done'
+    toggleBtn.className = 'btn';
+    const dot = toggleBtn.querySelector('.dot');
+
+    if (state === 'running') {
+      toggleBtn.classList.add('btn-pause');
+      dot.className = 'dot dot-run';
+      toggleBtn.childNodes[1].textContent = ' Pause';
+      statusLabel.textContent = 'running';
+    } else if (state === 'paused') {
+      toggleBtn.classList.add('btn-start');
+      dot.className = 'dot';
+      toggleBtn.childNodes[1].textContent = ' Resume';
+      statusLabel.textContent = 'paused';
+    } else if (state === 'done') {
+      toggleBtn.classList.add('btn-reset');
+      dot.className = 'dot';
+      toggleBtn.style.pointerEvents = 'none';
+      toggleBtn.childNodes[1].textContent = ' Done';
+      statusLabel.textContent = 'done';
+    } else {
+      toggleBtn.classList.add('btn-start');
+      dot.className = 'dot';
+      toggleBtn.childNodes[1].textContent = ' Start';
+      toggleBtn.style.pointerEvents = '';
+      statusLabel.textContent = 'ready';
+    }
+  }
+
+  function toggle() {
+    if (doneFlag) return;
+    if (running) {
+      clearInterval(interval);
+      running = false;
+      setToggleState('paused');
+    } else {
+      running = true;
+      setToggleState('running');
+      interval = setInterval(tick, 1000);
+    }
+  }
+
+  function tick() {
+    if (remaining <= 0) {
+      finish(); return;
+    }
+    remaining--;
+    updateDisplay();
+    if (remaining <= 0) finish();
+  }
+
+  function finish() {
+    clearInterval(interval);
+    running = false;
+    doneFlag = true;
+    remaining = 0;
+    updateDisplay();
+    display.classList.add('done');
+    setToggleState('done');
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  }
+
+  function reset() {
+    clearInterval(interval);
+    running = false;
+    doneFlag = false;
+    remaining = totalSeconds;
+    display.classList.remove('done');
+    toggleBtn.style.pointerEvents = '';
+    updateDisplay();
+    setToggleState('ready');
+  }
+
+  function selectPreset(idx) {
+    if (running) { clearInterval(interval); running = false; }
+    doneFlag = false;
+    totalSeconds = PRESETS[idx];
+    remaining = totalSeconds;
+    display.classList.remove('done');
+    toggleBtn.style.pointerEvents = '';
+    presetBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
+    updateDisplay();
+    setToggleState('ready');
+  }
+
+  presetBtns.forEach((btn, i) => {
+    btn.addEventListener('click', () => selectPreset(i));
+  });
+
+  updateDisplay();
+  setToggleState('ready');
+</script>
+</body>
+</html>
