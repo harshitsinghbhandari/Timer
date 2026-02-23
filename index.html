@@ -289,7 +289,16 @@
 
 <body>
 
-  <button class="focus-btn" onclick="toggleFocus()" aria-label="Enter focus mode">
+  <button class="focus-btn" id="popoutBtn" onclick="togglePiP()" aria-label="Pop out timer" style="right: 60px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  </button>
+
+  <button class="focus-btn" id="focusBtn" onclick="toggleFocus()" aria-label="Enter focus mode">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
       stroke-linecap="round" stroke-linejoin="round">
       <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
@@ -319,12 +328,20 @@
     </button>
   </div>
 
-  <div class="timer-wrap">
-    <div class="timer" id="display">05:00</div>
-    <div class="progress-track">
-      <div class="progress-fill" id="progress"></div>
+  <div id="pip-container">
+    <div class="timer-wrap" id="timerContainer">
+      <div class="timer" id="display">05:00</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress"></div>
+      </div>
+      <div class="label" id="statusLabel">ready</div>
     </div>
-    <div class="label" id="statusLabel">ready</div>
+  </div>
+
+  <div id="pip-overlay"
+    style="display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; color:#4a4844; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;">
+    Timer is in pop-out window
+    <button class="btn btn-reset" onclick="togglePiP()" style="width:auto; height:auto; margin-top:20px; padding:10px 20px;">Return to Tab</button>
   </div>
 
   <div class="controls">
@@ -342,12 +359,16 @@
     let running = false;
     let interval = null;
     let doneFlag = false;
+    let pipWindow = null;
 
     const display = document.getElementById('display');
     const progress = document.getElementById('progress');
     const statusLabel = document.getElementById('statusLabel');
     const toggleBtn = document.getElementById('toggleBtn');
     const presetBtns = document.querySelectorAll('.preset');
+    const timerContainer = document.getElementById('timerContainer');
+    const pipOverlay = document.getElementById('pip-overlay');
+    const pipBtn = document.getElementById('popoutBtn');
 
     function fmt(s) {
       const h = Math.floor(s / 3600);
@@ -456,7 +477,6 @@
     function toggleFocus() {
       document.body.classList.toggle('focus-mode');
 
-      // Attempt real fullscreen if possible (not supported on iPhone Safari for elements, only iPad/Desktop)
       if (document.body.classList.contains('focus-mode')) {
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen().catch(() => { });
@@ -468,8 +488,72 @@
       }
     }
 
+    async function togglePiP() {
+      if (pipWindow) {
+        pipWindow.close();
+        return;
+      }
+
+      if (!('documentPictureInPicture' in window)) {
+        alert('Document Picture-in-Picture is not supported in this browser. Try Chrome 116+');
+        return;
+      }
+
+      try {
+        // Open the PiP window
+        pipWindow = await window.documentPictureInPicture.requestWindow({
+          width: 320,
+          height: 320,
+        });
+
+        // Copy styles
+        [...document.styleSheets].forEach((styleSheet) => {
+          try {
+            const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+            const style = document.createElement('style');
+            style.textContent = cssRules;
+            pipWindow.document.head.appendChild(style);
+          } catch (e) {
+            const link = document.createElement('link');
+            if (styleSheet.href) {
+              link.rel = 'stylesheet';
+              link.type = styleSheet.type;
+              link.media = styleSheet.media;
+              link.href = styleSheet.href;
+              pipWindow.document.head.appendChild(link);
+            }
+          }
+        });
+
+        // Add extra PiP specific styles to handle resizing better
+        const pipStyle = document.createElement('style');
+        pipStyle.textContent = `
+          body { padding: 0 !important; display: flex !important; align-items: center; justify-content: center; background: #000; }
+          .timer-wrap { width: 100%; height: 100%; padding: 20px; }
+          .timer { font-size: clamp(40px, 20vw, 120px); }
+        `;
+        pipWindow.document.head.appendChild(pipStyle);
+
+        // Move timer container to PiP window
+        pipWindow.document.body.append(timerContainer);
+        pipOverlay.style.display = 'flex';
+        pipBtn.style.color = 'var(--accent)';
+
+        // Handle PiP window close
+        pipWindow.addEventListener('pagehide', (event) => {
+          pipWindow = null;
+          document.getElementById('pip-container').append(timerContainer);
+          pipOverlay.style.display = 'none';
+          pipBtn.style.color = '';
+        });
+
+      } catch (err) {
+        console.error('Failed to enter PiP:', err);
+      }
+    }
+
     // Tap display to exit focus mode
-    display.parentElement.addEventListener('click', () => {
+    timerContainer.addEventListener('click', () => {
       if (document.body.classList.contains('focus-mode')) {
         toggleFocus();
       }
