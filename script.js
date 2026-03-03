@@ -92,6 +92,7 @@ function finish() {
     updateDisplay();
     display.classList.add('done');
     setToggleState('done');
+    alarmSound.play().catch(console.error);
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 }
 
